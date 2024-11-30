@@ -1,14 +1,14 @@
 package com.nttdata.bootcamp_bank_product_service.service.impl;
 
+import com.nttdata.bootcamp_bank_product_service.client.CustomerClient;
+import com.nttdata.bootcamp_bank_product_service.client.ProductTypeClient;
 import com.nttdata.bootcamp_bank_product_service.config.ProductTypeConfig;
 import com.nttdata.bootcamp_bank_product_service.model.collection.BankProduct;
-import com.nttdata.bootcamp_bank_product_service.model.collection.Customer;
+import com.nttdata.bootcamp_bank_product_service.model.dto.Customer;
 import com.nttdata.bootcamp_bank_product_service.model.dto.Transaction;
 import com.nttdata.bootcamp_bank_product_service.model.dto.AccountHolder;
 import com.nttdata.bootcamp_bank_product_service.model.response.Response;
 import com.nttdata.bootcamp_bank_product_service.repository.BankProductRepository;
-import com.nttdata.bootcamp_bank_product_service.repository.CustomerRepository;
-import com.nttdata.bootcamp_bank_product_service.repository.ProductTypeRepository;
 import com.nttdata.bootcamp_bank_product_service.service.BankProductService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -28,14 +28,18 @@ import java.util.List;
 public class BankProductServiceImpl implements BankProductService {
 
     private final BankProductRepository bankProductRepository;
-    private final ProductTypeRepository productTypeRepository;
-    private final CustomerRepository customerRepository;
+    private final ProductTypeClient productTypeClient;
+    private final CustomerClient customerClient;
     private final ProductTypeConfig productTypeConfig;
 
-    public BankProductServiceImpl(BankProductRepository bankProductRepository, ProductTypeRepository productTypeRepository, CustomerRepository customerRepository, ProductTypeConfig productTypeConfig) {
+    public BankProductServiceImpl(
+            BankProductRepository bankProductRepository,
+            ProductTypeClient productTypeClient,
+            CustomerClient customerClient,
+            ProductTypeConfig productTypeConfig) {
         this.bankProductRepository = bankProductRepository;
-        this.productTypeRepository = productTypeRepository;
-        this.customerRepository = customerRepository;
+        this.productTypeClient = productTypeClient;
+        this.customerClient = customerClient;
         this.productTypeConfig = productTypeConfig;
     }
 
@@ -73,7 +77,7 @@ public class BankProductServiceImpl implements BankProductService {
                 .toList();
 
         // Validar que todos los titulares
-        Flux<Customer> accountCustomerHolders = customerRepository.findByIdIn(customerIds);
+        Flux<Customer> accountCustomerHolders = customerClient.findByIdIn(customerIds);
 
         // Consultar detalles de productos existentes
         // Reglas para clientes personales
@@ -98,7 +102,7 @@ public class BankProductServiceImpl implements BankProductService {
                     // Consultar detalles de productos existentes
                     return Flux.fromIterable(bankProduct.getAccountHolders())
                             .flatMap(holder -> bankProductRepository.findAllByCustomerId(holder.getCustomerId()))
-                            .flatMap(existingProduct -> productTypeRepository.findById(existingProduct.getTypeProductId()))
+                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId()))
                             .collectList()
                             .flatMap(productDetails -> {
                                 boolean isValid;
