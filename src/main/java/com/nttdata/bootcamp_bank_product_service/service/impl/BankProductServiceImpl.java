@@ -1,15 +1,15 @@
-package com.nttdata.bootcamp_customer_service.service.impl;
+package com.nttdata.bootcamp_bank_product_service.service.impl;
 
-import com.nttdata.bootcamp_customer_service.config.ProductTypeConfig;
-import com.nttdata.bootcamp_customer_service.model.collection.BankProduct;
-import com.nttdata.bootcamp_customer_service.model.collection.Customer;
-import com.nttdata.bootcamp_customer_service.model.dto.Transaction;
-import com.nttdata.bootcamp_customer_service.model.dto.AccountHolder;
-import com.nttdata.bootcamp_customer_service.model.response.Response;
-import com.nttdata.bootcamp_customer_service.repository.BankProductRepository;
-import com.nttdata.bootcamp_customer_service.repository.CustomerRepository;
-import com.nttdata.bootcamp_customer_service.repository.ProductTypeRepository;
-import com.nttdata.bootcamp_customer_service.service.BankProductService;
+import com.nttdata.bootcamp_bank_product_service.config.ProductTypeConfig;
+import com.nttdata.bootcamp_bank_product_service.model.collection.BankProduct;
+import com.nttdata.bootcamp_bank_product_service.model.collection.Customer;
+import com.nttdata.bootcamp_bank_product_service.model.dto.Transaction;
+import com.nttdata.bootcamp_bank_product_service.model.dto.AccountHolder;
+import com.nttdata.bootcamp_bank_product_service.model.response.Response;
+import com.nttdata.bootcamp_bank_product_service.repository.BankProductRepository;
+import com.nttdata.bootcamp_bank_product_service.repository.CustomerRepository;
+import com.nttdata.bootcamp_bank_product_service.repository.ProductTypeRepository;
+import com.nttdata.bootcamp_bank_product_service.service.BankProductService;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

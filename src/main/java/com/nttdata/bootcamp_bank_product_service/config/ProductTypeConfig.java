@@ -1,4 +1,4 @@
-package com.nttdata.bootcamp_customer_service.config;
+package com.nttdata.bootcamp_bank_product_service.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;

@@ -1,9 +1,9 @@
-package com.nttdata.bootcamp_customer_service.controller;
+package com.nttdata.bootcamp_bank_product_service.controller;
 
-import com.nttdata.bootcamp_customer_service.model.collection.BankProduct;
-import com.nttdata.bootcamp_customer_service.model.dto.Transaction;
-import com.nttdata.bootcamp_customer_service.model.response.Response;
-import com.nttdata.bootcamp_customer_service.service.BankProductService;
+import com.nttdata.bootcamp_bank_product_service.model.collection.BankProduct;
+import com.nttdata.bootcamp_bank_product_service.model.dto.Transaction;
+import com.nttdata.bootcamp_bank_product_service.model.response.Response;
+import com.nttdata.bootcamp_bank_product_service.service.BankProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;

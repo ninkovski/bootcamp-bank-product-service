@@ -1,7 +1,7 @@
-package com.nttdata.bootcamp_customer_service.model.collection;
+package com.nttdata.bootcamp_bank_product_service.model.collection;
 
-import com.nttdata.bootcamp_customer_service.model.dto.AccountHolder;
-import com.nttdata.bootcamp_customer_service.model.dto.Transaction;
+import com.nttdata.bootcamp_bank_product_service.model.dto.AccountHolder;
+import com.nttdata.bootcamp_bank_product_service.model.dto.Transaction;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;

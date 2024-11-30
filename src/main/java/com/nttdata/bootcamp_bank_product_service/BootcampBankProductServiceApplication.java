@@ -1,13 +1,13 @@
-package com.nttdata.bootcamp_customer_service;
+package com.nttdata.bootcamp_bank_product_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class BootcampCustomerServiceApplication {
+public class BootcampBankProductServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(BootcampCustomerServiceApplication.class, args);
+		SpringApplication.run(BootcampBankProductServiceApplication.class, args);
 	}
 
 }

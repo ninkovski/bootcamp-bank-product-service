@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.nttdata</groupId>
-	<artifactId>bootcamp-customer-service</artifactId>
+	<artifactId>bootcamp-bank-product-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>bootcamp-customer-service</name>
+	<name>bootcamp-bank-product-service</name>
 	<description>Proyecto para bootcamp 57 ntt data</description>
 	<url/>
 	<licenses>

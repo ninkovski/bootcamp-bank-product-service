@@ -1,6 +1,6 @@
-package com.nttdata.bootcamp_customer_service.repository;
+package com.nttdata.bootcamp_bank_product_service.repository;
 
-import com.nttdata.bootcamp_customer_service.model.collection.Customer;
+import com.nttdata.bootcamp_bank_product_service.model.collection.Customer;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
 import reactor.core.publisher.Flux;
 

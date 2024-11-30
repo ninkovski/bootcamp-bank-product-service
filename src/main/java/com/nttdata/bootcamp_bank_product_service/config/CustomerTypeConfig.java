@@ -1,6 +1,6 @@
-package com.nttdata.bootcamp_customer_service.config;
+package com.nttdata.bootcamp_bank_product_service.config;
 
-import com.nttdata.bootcamp_customer_service.model.dto.CustomerType;
+import com.nttdata.bootcamp_bank_product_service.model.dto.CustomerType;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;

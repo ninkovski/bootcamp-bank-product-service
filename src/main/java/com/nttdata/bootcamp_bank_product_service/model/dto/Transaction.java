@@ -1,4 +1,4 @@
-package com.nttdata.bootcamp_customer_service.model.dto;
+package com.nttdata.bootcamp_bank_product_service.model.dto;
 
 import lombok.Data;
 

@@ -1,8 +1,8 @@
-package com.nttdata.bootcamp_customer_service.service;
+package com.nttdata.bootcamp_bank_product_service.service;
 
-import com.nttdata.bootcamp_customer_service.model.collection.BankProduct;
-import com.nttdata.bootcamp_customer_service.model.dto.Transaction;
-import com.nttdata.bootcamp_customer_service.model.response.Response;
+import com.nttdata.bootcamp_bank_product_service.model.collection.BankProduct;
+import com.nttdata.bootcamp_bank_product_service.model.dto.Transaction;
+import com.nttdata.bootcamp_bank_product_service.model.response.Response;
 import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
