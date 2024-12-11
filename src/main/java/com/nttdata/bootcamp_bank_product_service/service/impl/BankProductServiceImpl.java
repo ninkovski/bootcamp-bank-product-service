@@ -19,6 +19,9 @@ import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -79,11 +82,6 @@ public class BankProductServiceImpl implements BankProductService {
         // Validar que todos los titulares
         Flux<Customer> accountCustomerHolders = customerClient.findByIdIn(customerIds, bearerToken);
 
-        // Consultar detalles de productos existentes
-        // Reglas para clientes personales
-        // Reglas para clientes empresariales (solo cuentas corrientes)
-        // Si pasa las validaciones, guardar el producto
-
         return accountCustomerHolders
                 .collectList()
                 .flatMap(customers -> {
@@ -96,19 +94,16 @@ public class BankProductServiceImpl implements BankProductService {
                         log.error("All account holders must be of the same type: personal or business.");
                         return Mono.just(ResponseEntity.badRequest()
                                 .body(new Response<>("All account holders must be of the same type: personal or business.", null)));
-
                     }
 
-                    // Consultar detalles de productos existentes
                     return Flux.fromIterable(bankProduct.getAccountHolders())
                             .flatMap(holder -> bankProductRepository.findAllByCustomerId(holder.getCustomerId()))
-                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId(),bearerToken))
+                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId(), bearerToken))
                             .collectList()
                             .flatMap(productDetails -> {
                                 boolean isValid;
 
                                 if (isAllPersonal) {
-                                    // Reglas para clientes personales
                                     long savingAccounts = productDetails.stream()
                                             .filter(p -> p.getName().equalsIgnoreCase(productTypeConfig.getSaving())).count();
                                     long currentAccounts = productDetails.stream()
@@ -117,30 +112,69 @@ public class BankProductServiceImpl implements BankProductService {
                                             .filter(p -> p.getName().equalsIgnoreCase(productTypeConfig.getFixed())).count();
                                     long credits = productDetails.stream()
                                             .filter(p -> p.getName().equalsIgnoreCase(productTypeConfig.getCredit())).count();
+                                    long vipAccounts = productDetails.stream()
+                                            .filter(p -> p.getName().equalsIgnoreCase(productTypeConfig.getSavingVip())).count();
 
-                                    isValid = savingAccounts <= 1 && currentAccounts <= 1 && fixedAccounts <= 1 && credits <= 1;
+                                    // Reglas para clientes personales
+                                    isValid = savingAccounts <= 1 && currentAccounts <= 1 && fixedAccounts <= 1 && credits <= 1 && vipAccounts <= 1;
+
+                                    // Validar requisitos para cuenta VIP
+                                    if (bankProduct.getTypeProductId().equalsIgnoreCase(productTypeConfig.getSavingVip())) {
+                                        boolean hasCreditCard = productDetails.stream()
+                                                .anyMatch(p -> p.getName().equalsIgnoreCase(productTypeConfig.getCredit()));
+                                        if (!hasCreditCard) {
+                                            log.error("A VIP account requires the customer to have a credit card.");
+                                            return Mono.just(ResponseEntity.badRequest()
+                                                    .body(new Response<>("A VIP account requires the customer to have a credit card.", null)));
+                                        }
+                                    }
                                 } else {
-                                    // Reglas para clientes empresariales (solo cuentas corrientes)
                                     boolean hasInvalidAccount = productDetails.stream()
                                             .anyMatch(p -> !p.getName().equalsIgnoreCase(productTypeConfig.getCurrent()));
-                                    isValid = !hasInvalidAccount;
+                                    long pymeAccounts = productDetails.stream()
+                                            .filter(p -> p.getName().equalsIgnoreCase(productTypeConfig.getCurrentMype())).count();
+
+                                    // Reglas para clientes empresariales (solo cuentas corrientes y PYME)
+                                    isValid = !hasInvalidAccount && pymeAccounts <= 1;
+
+                                    // Validar requisitos para cuenta PYME
+                                    if (bankProduct.getTypeProductId().equalsIgnoreCase(productTypeConfig.getCurrentMype())) {
+                                        boolean hasCreditCard = productDetails.stream()
+                                                .anyMatch(p -> p.getName().equalsIgnoreCase(productTypeConfig.getCredit()));
+                                        if (!hasCreditCard) {
+                                            log.error("A PYME account requires the customer to have a credit card.");
+                                            return Mono.just(ResponseEntity.badRequest()
+                                                    .body(new Response<>("A PYME account requires the customer to have a credit card.", null)));
+                                        }
+                                    }
                                 }
 
                                 if (!isValid) {
                                     log.error("Validation failed for the bank product.");
                                     return Mono.just(ResponseEntity.badRequest()
                                             .body(new Response<>("Validation failed for the bank product.", null)));
-
                                 }
+                                return productTypeClient.findById(bankProduct.getTypeProductId(), bearerToken)
+                                        .flatMap(productType -> {
+                                            if (bankProduct.getBalance().compareTo(productType.getAmount()) <= 0) {
+                                                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                                Transaction initialTransaction = new Transaction();
+                                                initialTransaction.setProductId(bankProduct.getId());
+                                                initialTransaction.setSubstract(false);
+                                                initialTransaction.setAmount(bankProduct.getBalance());
+                                                initialTransaction.setDate(dateFormat.format(new Date()));
+                                                initialTransaction.setDescription("New Account creation.");
+                                                bankProduct.getTransactions().add(initialTransaction);
+                                            }
 
-                                // Si pasa las validaciones, guardar el producto
-                                return bankProductRepository.save(bankProduct)
-                                        .doOnSuccess(savedBankProduct -> log.info("Bank product created successfully with ID: {}", savedBankProduct.getId()))
-                                        .doOnError(error -> log.error("Error occurred while creating bank product: {}", error.getMessage()))
-                                        .map(savedBankProduct -> ResponseEntity.status(HttpStatus.CREATED)
-                                                .body(new Response<>("Bank product created successfully.", savedBankProduct)))
-                                        .onErrorResume(error -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                                .body(new Response<>("An error occurred while creating the bank product.", null))));
+                                            return bankProductRepository.save(bankProduct)
+                                                    .doOnSuccess(savedBankProduct -> log.info("Bank product created successfully with ID: {}", savedBankProduct.getId()))
+                                                    .doOnError(error -> log.error("Error occurred while creating bank product: {}", error.getMessage()))
+                                                    .map(savedBankProduct -> ResponseEntity.status(HttpStatus.CREATED)
+                                                            .body(new Response<>("Bank product created successfully.", savedBankProduct)))
+                                                    .onErrorResume(error -> Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                            .body(new Response<>("An error occurred while creating the bank product.", null))));
+                                        });
                             });
                 });
     }
@@ -148,42 +182,84 @@ public class BankProductServiceImpl implements BankProductService {
     @Override
     public Mono<ResponseEntity<Response<BankProduct>>> makeTransaction(String productId, Transaction transaction) {
         return bankProductRepository.findById(productId)
-                .flatMap(bankProduct -> {
-                    BigDecimal currentBalance = bankProduct.getBalance();
-                    BigDecimal transactionAmount = transaction.getAmount();
+                .flatMap(bankProduct ->
+                        productTypeClient.findById(bankProduct.getTypeProductId(), "Bearer Token")
+                                .flatMap(productType -> {
+                                    BigDecimal currentBalance = bankProduct.getBalance();
+                                    BigDecimal transactionAmount = transaction.getAmount();
+                                    boolean isWithdrawal = transaction.getSubstract();
 
-                    // Determinar si la transacción es un retiro (subtract)
-                    if (transaction.getSubstract()) {
-                        transactionAmount = transactionAmount.negate(); // Cambiar el monto a negativo para un retiro
+                                    // Contar las transacciones del mes
+                                    long currentMonthTransactions = bankProduct.getTransactions().stream()
+                                            .filter(t -> isTransactionInCurrentMonth(t.getDate()))
+                                            .count();
 
-                        // Validar si hay suficiente balance para realizar el retiro
-                        if (currentBalance.add(transactionAmount).compareTo(BigDecimal.ZERO) < 0) {
-                            log.error("Insufficient funds for transaction on product ID: {}", productId);
-                            // Devuelve un error 400 si no hay suficiente balance
-                            return Mono.just(ResponseEntity.badRequest()
-                                    .body(new Response<>("Insufficient funds for transaction on product ID: " + productId, new BankProduct())));
-                        }
-                    }
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    transaction.setDate(dateFormat.format(new Date()));
-                    // Actualizar el balance del producto
-                    bankProduct.setBalance(currentBalance.add(transactionAmount));
-                    // Establecer el monto ajustado (positivo o negativo) en la transacción
-                    transaction.setAmount(transactionAmount);
-                    // Agregar la transacción a la lista
-                    bankProduct.getTransactions().add(transaction);
-                    // Guardar el producto con la nueva transacción
-                    return bankProductRepository.save(bankProduct)
-                            .map(savedProduct -> {
-                                log.info("Transaction successful for product ID: {}. New balance: {}", savedProduct.getId(), savedProduct.getBalance());
-                                return ResponseEntity.status(HttpStatus.CREATED)
-                                        .body(new Response<>("Transaction successful for product ID: " + savedProduct.getId() + ". New balance: " + savedProduct.getBalance(), savedProduct));
-                            });
-                })
+                                    BigDecimal commission = BigDecimal.ZERO;
+
+                                    // Aplicar comisión si se excede el límite de transacciones gratuitas
+                                    if (currentMonthTransactions >= productType.getTransactionCount()) {
+                                        commission = productType.getCommission();
+                                    }
+
+                                    // Calcular el monto total a deducir (retiro + comisión si aplica)
+                                    if (isWithdrawal) {
+                                        BigDecimal totalDeduction = transactionAmount.add(commission);
+                                        if (currentBalance.subtract(totalDeduction).compareTo(BigDecimal.ZERO) < 0) {
+                                            log.error("Insufficient funds for transaction (including commission) on product ID: {}", productId);
+                                            return Mono.just(ResponseEntity.badRequest()
+                                                    .body(new Response<>("Insufficient funds for transaction (including commission) on product ID: " + productId, new BankProduct())));
+                                        }
+                                        // Aplicar deducción del monto de retiro y comisión
+                                        transactionAmount = transactionAmount.negate();
+                                        bankProduct.setBalance(currentBalance.add(transactionAmount).subtract(commission));
+                                    } else {
+                                        // Para depósitos, solo actualizar el balance
+                                        bankProduct.setBalance(currentBalance.add(transactionAmount));
+                                    }
+                                    // Agregar la transacción al historial
+                                    SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                    transaction.setDate(dateFormat.format(new Date()));
+                                    bankProduct.getTransactions().add(transaction);
+
+                                    // Si se aplicó comisión, registrar una transacción separada para la comisión
+                                    if (commission.compareTo(BigDecimal.ZERO) > 0) {
+                                        Transaction commissionTransaction = new Transaction();
+                                        commissionTransaction.setProductId(productId);
+                                        commissionTransaction.setSubstract(true);
+                                        commissionTransaction.setAmount(commission.negate());
+                                        commissionTransaction.setDate(dateFormat.format(new Date()));
+                                        commissionTransaction.setDescription("Commission fee for exceeding free transactions");
+                                        bankProduct.getTransactions().add(commissionTransaction);
+                                    }
+
+                                    // Guardar el producto bancario con las transacciones actualizadas
+                                    return bankProductRepository.save(bankProduct)
+                                            .map(savedProduct -> {
+                                                log.info("Transaction successful for product ID: {}. New balance: {}", savedProduct.getId(), savedProduct.getBalance());
+                                                return ResponseEntity.status(HttpStatus.CREATED)
+                                                        .body(new Response<>("Transaction successful for product ID: " + savedProduct.getId() + ". New balance: " + savedProduct.getBalance(), savedProduct));
+                                            });
+                                })
+                )
                 .switchIfEmpty(Mono.just(ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
                         .body(new Response<>("Product not found with product ID: " + productId, new BankProduct()))));
     }
+
+    /**
+     * Verifica si una fecha está dentro del mes actual.
+     */
+    private boolean isTransactionInCurrentMonth(String date) {
+        try {
+            LocalDate transactionDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            LocalDate now = LocalDate.now();
+            return transactionDate.getYear() == now.getYear() && transactionDate.getMonth() == now.getMonth();
+        } catch (DateTimeParseException e) {
+            log.error("Error parsing transaction date: {}", date);
+            return false;
+        }
+    }
+
 
     @Override
     public Mono<ResponseEntity<Response<BigDecimal>>> getProductBalance(String productId) {
@@ -205,27 +281,6 @@ public class BankProductServiceImpl implements BankProductService {
                         .status(HttpStatus.NOT_FOUND)
                         .body(new Response<>("No transactions found for product ID: " + productId, null)))); // Null for no data
     }
-
-    /*@Override
-    public Mono<ResponseEntity<BankProduct>> updateBankProduct(String productId, BankProduct bankProduct) {
-        return bankProductRepository.findById(productId)
-                .flatMap(existingProduct -> {
-                    existingProduct.setProductNumber(bankProduct.getProductNumber());
-                    existingProduct.setTypeProductId(bankProduct.getTypeProductId());
-                    existingProduct.setAccountHolders(bankProduct.getAccountHolders());
-                    existingProduct.setBalance(bankProduct.getBalance());
-                    existingProduct.setActive(bankProduct.isActive());
-                    existingProduct.setTransactions(bankProduct.getTransactions());
-                    return bankProductRepository.save(existingProduct)
-                            .map(updatedProduct -> {
-                                log.info("Bank product updated successfully with ID: {}", updatedProduct.getId());
-                                return ResponseEntity.ok(updatedProduct);
-                            });
-                })
-                .switchIfEmpty(Mono.just(ResponseEntity
-                        .status(HttpStatus.NOT_FOUND)
-                        .body(null)));
-    }*/
 
     @Override
     public Mono<ResponseEntity<Response<Object>>> deleteBankProduct(String productId) {

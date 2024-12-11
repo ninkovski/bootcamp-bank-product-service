@@ -17,8 +17,6 @@ public interface BankProductService {
 
     Mono<ResponseEntity<Response<BankProduct>>> getBankProductById(String productId);
 
-    //Mono<ResponseEntity<Response<BankProduct>>> updateBankProduct(String productId, BankProduct bankProduct);
-
     Mono<ResponseEntity<Response<Object>>> deleteBankProduct(String productId);
 
     Mono<ResponseEntity<Response<BigDecimal>>> getProductBalance(String productId);

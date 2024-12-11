@@ -44,12 +44,6 @@ public class BankProductController {
         return bankProductService.getBankProductById(productId);
     }
 
-    // Actualizar un producto bancario
-    /*@PutMapping("/{productId}")
-    public Mono<ResponseEntity<Response<BankProduct>>> updateBankProduct(@PathVariable String productId, @RequestBody BankProduct bankProduct) {
-        return bankProductService.updateBankProduct(productId, bankProduct);
-    }*/
-
     // Eliminar un producto bancario
     @DeleteMapping("/{productId}")
     public Mono<ResponseEntity<Response<Object>>> deleteBankProduct(@PathVariable String productId) {

@@ -13,5 +13,7 @@ public class ProductTypeConfig {
     private String fixed;
     private String credit;
     private String creditCard;
+    private String savingVip;
+    private String currentMype;
 }
 
