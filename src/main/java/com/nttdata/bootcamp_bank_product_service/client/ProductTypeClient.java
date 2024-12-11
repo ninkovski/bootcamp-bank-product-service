@@ -16,11 +16,12 @@ public class ProductTypeClient {
         this.serviceUrlsConfig = serviceUrlsConfig;
     }
 
-    public Mono<ProductType> findById(String id) {
+    public Mono<ProductType> findById(String id,String bearerToken) {
         return webClientBuilder.baseUrl(serviceUrlsConfig.getProductType()) // Cambia al host de tu microservicio
+                .defaultHeader("Authorization", "Bearer " + bearerToken) // Añades el Bearer Token aquí
                 .build()
                 .get()
-                .uri("/product-types/{id}", id)
+                .uri("/api/product-types/{id}", id)
                 .retrieve()
                 .bodyToMono(ProductType.class); // Devuelve un Mono de tipo ProductType
     }

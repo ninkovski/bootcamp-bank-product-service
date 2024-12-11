@@ -7,7 +7,6 @@ import com.nttdata.bootcamp_bank_product_service.service.BankProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
-import reactor.core.publisher.Flux;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -23,14 +22,20 @@ public class BankProductController {
 
     // Crear un producto bancario
     @PostMapping
-    public Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(@RequestBody BankProduct bankProduct) {
-        return bankProductService.createBankProduct(bankProduct);
+    public Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(
+            @RequestBody BankProduct bankProduct,
+            @RequestHeader("Authorization") String bearerToken
+    ) {
+        return bankProductService.createBankProduct(bankProduct,bearerToken);
     }
 
     // Consultar todos los productos bancarios
     @GetMapping
-    public Flux<ResponseEntity<Response<BankProduct>>> getAllBankProducts() {
-        return bankProductService.getAllBankProducts();
+    public Mono<ResponseEntity<List<BankProduct>>> getAllProducts() {
+        return bankProductService.getAllBankProducts()
+                .flatMap(response -> Mono.justOrEmpty(response.getBody().getData())) // Extrae los datos desde el ResponseEntity<Response<BankProduct>>
+                .collectList() // Convierte el Flux<BankProduct> a un Mono<List<BankProduct>>
+                .map(ResponseEntity::ok); // Construye el ResponseEntity
     }
 
     // Consultar un producto bancario por ID

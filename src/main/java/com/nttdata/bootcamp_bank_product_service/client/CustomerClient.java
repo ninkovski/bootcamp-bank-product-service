@@ -19,8 +19,9 @@ public class CustomerClient {
         this.serviceUrlsConfig = serviceUrlsConfig;
     }
 
-    public Flux<Customer> findByIdIn(List<String> customerIds){
+    public Flux<Customer> findByIdIn(List<String> customerIds,String bearerToken){
         return webClientBuilder.baseUrl(serviceUrlsConfig.getCustomer())
+                .defaultHeader("Authorization", "Bearer " + bearerToken) // Añades el Bearer Token aquí
                 .build()
                 .post()
                 .uri("/api/customers/in")

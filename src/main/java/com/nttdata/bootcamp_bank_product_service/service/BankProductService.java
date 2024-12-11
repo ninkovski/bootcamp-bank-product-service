@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public interface BankProductService {
-    Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(BankProduct bankProduct);
+    Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(BankProduct bankProduct, String bearerToken);
 
     Flux<ResponseEntity<Response<BankProduct>>> getAllBankProducts();
 

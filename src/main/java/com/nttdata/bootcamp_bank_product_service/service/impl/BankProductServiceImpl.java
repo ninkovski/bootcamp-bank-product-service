@@ -44,7 +44,7 @@ public class BankProductServiceImpl implements BankProductService {
     }
 
     @Override
-    public Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(BankProduct bankProduct) {
+    public Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(BankProduct bankProduct, String bearerToken) {
         List<AccountHolder> accountHolders = bankProduct.getAccountHolders();
 
         // Verificar que el producto bancario tenga un tipo válido
@@ -77,7 +77,7 @@ public class BankProductServiceImpl implements BankProductService {
                 .toList();
 
         // Validar que todos los titulares
-        Flux<Customer> accountCustomerHolders = customerClient.findByIdIn(customerIds);
+        Flux<Customer> accountCustomerHolders = customerClient.findByIdIn(customerIds, bearerToken);
 
         // Consultar detalles de productos existentes
         // Reglas para clientes personales
@@ -102,7 +102,7 @@ public class BankProductServiceImpl implements BankProductService {
                     // Consultar detalles de productos existentes
                     return Flux.fromIterable(bankProduct.getAccountHolders())
                             .flatMap(holder -> bankProductRepository.findAllByCustomerId(holder.getCustomerId()))
-                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId()))
+                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId(),bearerToken))
                             .collectList()
                             .flatMap(productDetails -> {
                                 boolean isValid;
@@ -242,16 +242,16 @@ public class BankProductServiceImpl implements BankProductService {
     @Override
     public Flux<ResponseEntity<Response<BankProduct>>> getAllBankProducts() {
         return bankProductRepository.findAll()
-                .map(bankProduct -> ResponseEntity.ok(new Response<>("Bank products retrieved successfully", bankProduct))) // Mapear cada producto a ResponseEntity con mensaje de éxito
-                .switchIfEmpty(Flux.just(ResponseEntity
+                .map(bankProduct -> ResponseEntity.ok(new Response<>("Bank product retrieved successfully", bankProduct)))
+                .defaultIfEmpty(ResponseEntity
                         .status(HttpStatus.NO_CONTENT)
-                        .body(new Response<>("No bank products found.", null)))); // En caso de que no haya productos, devolver 204 con mensaje
+                        .body(new Response<>("No bank products found.", null))); // Usar defaultIfEmpty para un solo elemento vacío
     }
 
     @Override
     public Mono<ResponseEntity<Response<BankProduct>>> getBankProductById(String productId) {
         return bankProductRepository.findById(productId)
-                .map(bankProduct -> ResponseEntity.ok(new Response<>("Bank product found.", bankProduct))) // Si el producto existe, devolver 200 con mensaje y producto
+                .map(bankProduct -> ResponseEntity.ok(new Response<>("Success .", bankProduct))) // Si el producto existe, devolver 200 con mensaje y producto
                 .switchIfEmpty(Mono.just(ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
                         .body(new Response<>("Bank product not found with product ID: " + productId, null)))); // Si el producto no se encuentra, devolver 404 con mensaje
