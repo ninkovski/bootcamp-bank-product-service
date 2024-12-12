@@ -52,7 +52,9 @@ public class BankProductController {
 
     // Realizar una transacción (depósito o retiro)
     @PostMapping("/{productId}/transaction")
-    public Mono<ResponseEntity<Response<BankProduct>>> makeTransaction(@PathVariable String productId, @RequestBody Transaction transaction) {
+    public Mono<ResponseEntity<Response<BankProduct>>> makeTransaction(
+            @PathVariable String productId,
+            @RequestBody Transaction transaction) {
         return bankProductService.makeTransaction(productId, transaction);
     }
 

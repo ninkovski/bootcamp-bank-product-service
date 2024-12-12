@@ -188,7 +188,7 @@ public class BankProductServiceImpl implements BankProductService {
                                     BigDecimal currentBalance = bankProduct.getBalance();
                                     BigDecimal transactionAmount = transaction.getAmount();
                                     boolean isWithdrawal = transaction.getSubstract();
-                                    if(isWithdrawal) {
+                                    if (isWithdrawal) {
                                         transactionAmount = transactionAmount.negate();
                                     }
                                     boolean isCredit = productType.getName().equalsIgnoreCase(productTypeConfig.getCredit());
@@ -250,7 +250,9 @@ public class BankProductServiceImpl implements BankProductService {
                                             .map(savedProduct -> {
                                                 log.info("Transaction successful for product ID: {}. New balance: {}", savedProduct.getId(), savedProduct.getBalance());
                                                 return ResponseEntity.status(HttpStatus.CREATED)
-                                                        .body(new Response<>("Transaction successful for product ID: " + savedProduct.getId() + ". New balance: " + savedProduct.getBalance(), savedProduct));
+                                                        .body(new Response<>("Transaction successful for product ID: " +
+                                                                savedProduct.getId() + ". New balance: " +
+                                                                savedProduct.getBalance(), savedProduct));
                                             });
                                 })
                 )
@@ -259,9 +261,6 @@ public class BankProductServiceImpl implements BankProductService {
                         .body(new Response<>("Product not found with product ID: " + productId, new BankProduct()))));
     }
 
-    /**
-     * Verifica si una fecha está dentro del mes actual.
-     */
     private boolean isTransactionInCurrentMonth(String date) {
         try {
             LocalDate transactionDate = LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -281,7 +280,7 @@ public class BankProductServiceImpl implements BankProductService {
                 .map(balance -> ResponseEntity.ok(new Response<>("Balance retrieved successfully.", balance))) // Wrap the balance in the Response
                 .switchIfEmpty(Mono.just(ResponseEntity
                         .status(HttpStatus.NOT_FOUND)
-                        .body(new Response<>("Product not found with product ID: " + productId, null)))); // Null for no data
+                        .body(new Response<>("Product not found with product ID: " + productId, null))));
     }
 
     @Override
