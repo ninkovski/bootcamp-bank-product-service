@@ -188,6 +188,17 @@ public class BankProductServiceImpl implements BankProductService {
                                     BigDecimal currentBalance = bankProduct.getBalance();
                                     BigDecimal transactionAmount = transaction.getAmount();
                                     boolean isWithdrawal = transaction.getSubstract();
+                                    if(isWithdrawal) {
+                                        transactionAmount = transactionAmount.negate();
+                                    }
+                                    boolean isCredit = productType.getName().equalsIgnoreCase(productTypeConfig.getCredit());
+
+                                    // Validar que el monto para créditos sea siempre negativo
+                                    if (isCredit && isWithdrawal) {
+                                        log.error("Transactions for credit products must have a negative amount. Product ID: {}", productId);
+                                        return Mono.just(ResponseEntity.badRequest()
+                                                .body(new Response<>("Transactions for credit products must have a negative amount. Product ID: " + productId, new BankProduct())));
+                                    }
 
                                     // Contar las transacciones del mes
                                     long currentMonthTransactions = bankProduct.getTransactions().stream()
@@ -195,41 +206,43 @@ public class BankProductServiceImpl implements BankProductService {
                                             .count();
 
                                     BigDecimal commission = BigDecimal.ZERO;
-
-                                    // Aplicar comisión si se excede el límite de transacciones gratuitas
                                     if (currentMonthTransactions >= productType.getTransactionCount()) {
-                                        commission = productType.getCommission();
+                                        commission = productType.getCommission().negate(); // La comisión ya es negativa
                                     }
 
-                                    // Calcular el monto total a deducir (retiro + comisión si aplica)
-                                    if (isWithdrawal) {
-                                        BigDecimal totalDeduction = transactionAmount.add(commission);
-                                        if (currentBalance.subtract(totalDeduction).compareTo(BigDecimal.ZERO) < 0) {
-                                            log.error("Insufficient funds for transaction (including commission) on product ID: {}", productId);
-                                            return Mono.just(ResponseEntity.badRequest()
-                                                    .body(new Response<>("Insufficient funds for transaction (including commission) on product ID: " + productId, new BankProduct())));
-                                        }
-                                        // Aplicar deducción del monto de retiro y comisión
-                                        transactionAmount = transactionAmount.negate();
-                                        bankProduct.setBalance(currentBalance.add(transactionAmount).subtract(commission));
-                                    } else {
-                                        // Para depósitos, solo actualizar el balance
-                                        bankProduct.setBalance(currentBalance.add(transactionAmount));
+                                    // Calcular el monto total para deducir (retiro + comisión si aplica)
+                                    BigDecimal totalTransaction = transactionAmount.add(commission);
+                                    if ((isCredit && currentBalance.add(totalTransaction).compareTo(BigDecimal.ZERO) > 0) ||
+                                            (!isCredit && currentBalance.add(totalTransaction).compareTo(BigDecimal.ZERO) < 0)) {
+                                        String errorMessage = isCredit ? "The transaction amount exceeds the outstanding debt for product ID: " + productId :
+                                                "Insufficient funds for transaction (including commission) on product ID: " + productId;
+                                        log.error(errorMessage);
+                                        return Mono.just(ResponseEntity.badRequest()
+                                                .body(new Response<>(errorMessage, new BankProduct())));
                                     }
+                                    // Aplicar deducción del monto de retiro y comisión
+                                    bankProduct.setBalance(currentBalance.add(totalTransaction));
+
                                     // Agregar la transacción al historial
                                     SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                                     transaction.setDate(dateFormat.format(new Date()));
                                     bankProduct.getTransactions().add(transaction);
 
                                     // Si se aplicó comisión, registrar una transacción separada para la comisión
-                                    if (commission.compareTo(BigDecimal.ZERO) > 0) {
+                                    if (commission.compareTo(BigDecimal.ZERO) < 0) {
                                         Transaction commissionTransaction = new Transaction();
                                         commissionTransaction.setProductId(productId);
                                         commissionTransaction.setSubstract(true);
-                                        commissionTransaction.setAmount(commission.negate());
+                                        commissionTransaction.setAmount(commission);
                                         commissionTransaction.setDate(dateFormat.format(new Date()));
                                         commissionTransaction.setDescription("Commission fee for exceeding free transactions");
                                         bankProduct.getTransactions().add(commissionTransaction);
+                                    }
+
+                                    // Cambiar el estado a inactivo si el saldo del crédito es 0 o menor
+                                    if (isCredit && bankProduct.getBalance().compareTo(BigDecimal.ZERO) <= 0) {
+                                        bankProduct.setActive(false);
+                                        log.info("Credit product ID: {} is now inactive due to zero or negative balance.", productId);
                                     }
 
                                     // Guardar el producto bancario con las transacciones actualizadas
