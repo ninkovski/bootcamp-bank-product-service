@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
+@Slf4j
 @RequestMapping("/api/bankproducts")
 public class BankProductController {
 
@@ -24,8 +26,9 @@ public class BankProductController {
     @PostMapping
     public Mono<ResponseEntity<Response<BankProduct>>> createBankProduct(
             @RequestBody BankProduct bankProduct,
-            @RequestHeader("Authorization") String bearerToken
+            @RequestHeader(value = "token", required = false) String bearerToken
     ) {
+        log.info("bank product = {}" , bankProduct);
         return bankProductService.createBankProduct(bankProduct,bearerToken);
     }
 

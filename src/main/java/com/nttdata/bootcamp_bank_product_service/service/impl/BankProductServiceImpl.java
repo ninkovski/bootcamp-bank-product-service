@@ -78,9 +78,10 @@ public class BankProductServiceImpl implements BankProductService {
                 .map(AccountHolder::getCustomerId)
                 .distinct()
                 .toList();
-
+        log.info("Consutar Customer  "  );
         // Validar que todos los titulares
         Flux<Customer> accountCustomerHolders = customerClient.findByIdIn(customerIds, bearerToken);
+        log.info("  Customer = {}" , accountCustomerHolders);
 
         return accountCustomerHolders
                 .collectList()
@@ -98,7 +99,7 @@ public class BankProductServiceImpl implements BankProductService {
 
                     return Flux.fromIterable(bankProduct.getAccountHolders())
                             .flatMap(holder -> bankProductRepository.findAllByCustomerId(holder.getCustomerId()))
-                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId(), bearerToken))
+                            .flatMap(existingProduct -> productTypeClient.findById(existingProduct.getTypeProductId()))
                             .collectList()
                             .flatMap(productDetails -> {
                                 boolean isValid;
@@ -154,7 +155,7 @@ public class BankProductServiceImpl implements BankProductService {
                                     return Mono.just(ResponseEntity.badRequest()
                                             .body(new Response<>("Validation failed for the bank product.", null)));
                                 }
-                                return productTypeClient.findById(bankProduct.getTypeProductId(), bearerToken)
+                                return productTypeClient.findById(bankProduct.getTypeProductId())
                                         .flatMap(productType -> {
                                             if (bankProduct.getBalance().compareTo(productType.getAmount()) <= 0) {
                                                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -183,7 +184,7 @@ public class BankProductServiceImpl implements BankProductService {
     public Mono<ResponseEntity<Response<BankProduct>>> makeTransaction(String productId, Transaction transaction) {
         return bankProductRepository.findById(productId)
                 .flatMap(bankProduct ->
-                        productTypeClient.findById(bankProduct.getTypeProductId(), "Bearer Token")
+                        productTypeClient.findById(bankProduct.getTypeProductId())
                                 .flatMap(productType -> {
                                     BigDecimal currentBalance = bankProduct.getBalance();
                                     BigDecimal transactionAmount = transaction.getAmount();
